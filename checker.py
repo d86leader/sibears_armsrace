@@ -222,10 +222,6 @@ async def get_flag(store: Storage, host: str, flag_id, flag: str, vuln) -> NoRet
     client_eph_str = hex(client_eph).encode()
     writer.write(client_eph_str + b"\n")
     resp = await timed(reader.readline())
-    if resp.startswith(b"too short"):
-        mumble(f"too short: {client_eph_str} - {resp}")
-    elif resp.startswith(b"not a number"):
-        mumble(f"not a number: {client_eph_str} - {resp}")
     if resp == b"too short\n" or resp == b"not a number\n":
         mumble("Server dal yobu")
     try:

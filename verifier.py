@@ -5,10 +5,10 @@ from asyncio import get_event_loop, start_server, StreamReader, StreamWriter
 from base64 import b64decode
 from OpenSSL import crypto #type: ignore
 
-DbCreds = { "host": "192.168.56.101"
-          , "user": "test"
-          , "password": "test"
-          , "db": "tests"
+DbCreds = { "host": "127.0.0.1"
+          , "user": "stranger"
+          , "password": "a1b463c34866e45e5e7d959970228eac"
+          , "db": "armsrace"
           }
 
 mysql_pool = None
@@ -29,12 +29,12 @@ async def login(reader: StreamReader, writer: StreamWriter, cur, name: str) -> b
     client_eph_str = await reader.readline()
     client_eph_str = client_eph_str.strip()
     if len(client_eph_str) != str_len:
-        writer.write(b"too short - " + client_eph_str.strip() + b"\n")
+        writer.write(b"too short\n")
         return False
     try:
         client_eph = int(client_eph_str, 16)
     except ValueError:
-        writer.write(b"not a number - " + client_eph_str.strip() + b"\n")
+        writer.write(b"not a number\n")
         return False
 
     server_eph = randbits(bitsize)
