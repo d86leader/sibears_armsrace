@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/local/bin/python3
 import aiomysql #type: ignore
 import random
 from asyncio import get_event_loop, start_server, StreamReader, StreamWriter
@@ -9,6 +9,7 @@ DbCreds = { "host": "127.0.0.1"
           , "user": "stranger"
           , "password": "a1b463c34866e45e5e7d959970228eac"
           , "db": "armsrace"
+          , "maxsize": 1
           }
 
 mysql_pool = None
@@ -76,6 +77,7 @@ async def register(reader, writer, name: str) -> bool:
         async with conn.cursor() as cur:
             await cur.execute("insert into users (name, certificate) value (%s, %s)"
                              , (name, certificate))
+            await conn.commit()
     writer.write(b"ok\n")
     return True
 
@@ -99,7 +101,6 @@ async def handler(reader, writer) -> None:
     success = True
     if count == 0:
         success = await register(reader, writer, name)
-        await conn.commit()
     else:
         success = await login(reader, writer, name)
     if not success:
@@ -142,7 +143,7 @@ if __name__ == "__main__":
                                  + ", note text"
                                  + ")"
                                  )
-                conn.commit()
+                await conn.commit()
         #
         print("Starting server")
         s = await start_server(handler, "0.0.0.0", 9876)
