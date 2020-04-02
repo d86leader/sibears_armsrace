@@ -19,7 +19,11 @@ def randbits(size: int) -> int:
     return r
 
 
-async def login(reader: StreamReader, writer: StreamWriter, cur, name: str) -> bool:
+async def login(reader: StreamReader, writer: StreamWriter, name: str) -> bool:
+    global mysql_pool
+    if mysql_pool is None:
+        writer.write(b"database error\n")
+        return False
     bitsize = 256
     str_len = bitsize // 4 + 2
     client_eph: int
@@ -43,8 +47,10 @@ async def login(reader: StreamReader, writer: StreamWriter, cur, name: str) -> b
 
     data = hex(server_eph * client_eph).encode()
     signature = b64decode(await reader.readline())
-    await cur.execute("select certificate from users where name = %s", (name,))
-    (public_key,) = await cur.fetchone()
+    async with mysql_pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute("select certificate from users where name = %s", (name,))
+            (public_key,) = await cur.fetchone()
 
     try:
         key = crypto.load_certificate(crypto.FILETYPE_PEM, public_key.encode())
@@ -58,12 +64,18 @@ async def login(reader: StreamReader, writer: StreamWriter, cur, name: str) -> b
     writer.write(b"ok\n")
     return True
 
-async def register(reader, writer, cur, name: str) -> bool:
+async def register(reader, writer, name: str) -> bool:
+    global mysql_pool
+    if mysql_pool is None:
+        writer.write(b"database error\n")
+        return False
     writer.write(b"certificate\n")
     certificate = await reader.readuntil(b"-----END CERTIFICATE-----\n")
     certificate = certificate.decode()
-    await cur.execute("insert into users (name, certificate) value (%s, %s)"
-                     , (name, certificate))
+    async with mysql_pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute("insert into users (name, certificate) value (%s, %s)"
+                             , (name, certificate))
     writer.write(b"ok\n")
     return True
 
@@ -75,39 +87,44 @@ async def handler(reader, writer) -> None:
         writer.write(b"database error\n")
         return
 
+    writer.write(b"name\n")
+    name = await reader.readline()
+    name = name.strip()
     async with mysql_pool.acquire() as conn:
         async with conn.cursor() as cur:
-            writer.write(b"name\n")
-            name = await reader.readline()
-            name = name.strip()
             await cur.execute("select count(*) from users where name = %s"
                              , (name,))
             (count,) = await cur.fetchone()
 
-            success = True
-            if count == 0:
-                success = await register(reader, writer, cur, name)
-                await conn.commit()
-            else:
-                success = await login(reader, writer, cur, name)
-            if not success:
-                return
+    success = True
+    if count == 0:
+        success = await register(reader, writer, name)
+        await conn.commit()
+    else:
+        success = await login(reader, writer, name)
+    if not success:
+        return
 
-            command = await reader.readline()
-            command = command.strip()
+    command = await reader.readline()
+    command = command.strip()
 
-            if command == b"put":
-                data = await reader.readline()
-                data = data.strip()
+    if command == b"put":
+        data = await reader.readline()
+        data = data.strip()
+        async with mysql_pool.acquire() as conn:
+            async with conn.cursor() as cur:
                 await cur.execute("update users set note = %s where name = %s"
                            , (data, name))
                 await conn.commit()
-                writer.write(b"ok\n")
+        writer.write(b"ok\n")
 
-            elif command == b"get":
+    elif command == b"get":
+        data = ""
+        async with mysql_pool.acquire() as conn:
+            async with conn.cursor() as cur:
                 await cur.execute("select note from users where name = %s", (name,))
                 (data,) = await cur.fetchone()
-                writer.write(data.encode() + b"\n")
+        writer.write(data.encode() + b"\n")
 
 
 if __name__ == "__main__":
@@ -125,6 +142,7 @@ if __name__ == "__main__":
                                  + ", note text"
                                  + ")"
                                  )
+                conn.commit()
         #
         print("Starting server")
         s = await start_server(handler, "0.0.0.0", 9876)
