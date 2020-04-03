@@ -1,9 +1,13 @@
 # Armsrace
 
 Sibears training service 
+
 Service file: verifier.py 
+
 Checker file: checker.py 
+
 Checker will dump and read its database to and from CWD.
+
 Author: d86leader
 
 ## Tool stack
