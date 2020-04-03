@@ -164,7 +164,7 @@ async def put_flag(store: Storage, host: str, flag_id, flag: str, vuln) -> NoRet
     was_connected = False
     reader, writer = await timed(open_connection(host, PORT))
     while not was_connected:
-        greet = await reader.readline()
+        greet = await timed(reader.readline())
         if greet != b"name\n":
             mumble(f"Bad greeting: {greet}")
 
@@ -205,7 +205,7 @@ async def get_flag(store: Storage, host: str, flag_id, flag: str, vuln) -> NoRet
         verdict(CHECKER_ERROR, "Bad flag", "Flag was never stored")
     user = store.users[flag]
     reader, writer = await timed(open_connection(host, PORT))
-    greet = await reader.readline()
+    greet = await timed(reader.readline())
     if greet != b"name\n":
         mumble(f"Bad greeting: {greet}")
     writer.write(user.name + b"\n")
