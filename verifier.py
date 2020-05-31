@@ -1,11 +1,12 @@
 #!/usr/local/bin/python3
+import asyncio
 import aiomysql #type: ignore
 import random
 from asyncio import get_event_loop, start_server, StreamReader, StreamWriter
 from base64 import b64decode
 from OpenSSL import crypto #type: ignore
 
-DbCreds = { "host": "127.0.0.1"
+DbCreds = { "host": "mysql"
           , "user": "stranger"
           , "password": "a1b463c34866e45e5e7d959970228eac"
           , "db": "armsrace"
@@ -132,6 +133,8 @@ if __name__ == "__main__":
     loop = get_event_loop()
     async def server() -> None:
         global mysql_pool
+        print("Waiting for database for a bit")
+        await asyncio.sleep(3.0)
         print("Connecting to database")
         mysql_pool = await aiomysql.create_pool(**DbCreds)
         async with mysql_pool.acquire() as conn:

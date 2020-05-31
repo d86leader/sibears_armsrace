@@ -1,0 +1,16 @@
+version: '3'
+services:
+  armsrace:
+    build: .
+    ports:
+      - "9999:9999"
+  mysql:
+    image: "mysql:8.0"
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_DATABASE: armsrace
+      MYSQL_USER: stranger
+      MYSQL_PASSWORD: a1b463c34866e45e5e7d959970228eac
+      MYSQL_ALLOW_EMPTY_PASSWORD: 1
