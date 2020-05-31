@@ -3,7 +3,7 @@ services:
   armsrace:
     build: .
     ports:
-      - "9999:9999"
+      - "9876:9876"
   mysql:
     image: "mysql:8.0"
     volumes:
